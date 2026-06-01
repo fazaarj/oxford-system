@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oxford Aluminum & Glass — System</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background:#080e1a; color:#e2e8f0; min-height:100vh; }
+
+  /* SIDEBAR */
+  .sidebar { width:220px; background:linear-gradient(180deg,#0b1526,#0d1f3a); border-right:1px solid rgba(99,179,237,0.1); position:fixed; top:0; left:0; height:100vh; display:flex; flex-direction:column; z-index:100; }
+  .logo { padding:18px 20px; border-bottom:1px solid rgba(99,179,237,0.08); display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#1e88e5,#0d47a1); display:flex; align-items:center; justify-content:center; font-weight:900; color:white; font-size:16px; }
+  .logo-text { font-size:13px; font-weight:800; color:#e2e8f0; }
+  .logo-sub { font-size:9px; color:#475569; letter-spacing:0.1em; text-transform:uppercase; }
+  .nav { flex:1; padding:12px 8px; overflow-y:auto; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:9px; margin-bottom:3px; cursor:pointer; border:1px solid transparent; transition:all 0.15s; color:#94a3b8; font-size:13px; font-weight:500; }
+  .nav-item:hover { background:rgba(255,255,255,0.04); color:#e2e8f0; }
+  .nav-item.active { background:rgba(30,136,229,0.2); border-color:rgba(30,136,229,0.3); color:#60a5fa; font-weight:700; }
+  .nav-icon { font-size:18px; }
+  .badge { width:18px; height:18px; border-radius:50%; background:#ef4444; color:white; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-left:auto; }
+
+  /* MAIN */
+  .main { margin-left:220px; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { background:linear-gradient(135deg,#0b1526,#152240); border-bottom:1px solid rgba(99,179,237,0.12); padding:0 24px; display:flex; align-items:center; justify-content:space-between; height:60px; position:sticky; top:0; z-index:50; }
+  .topbar-title { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; }
+  .date-badge { font-size:11px; color:#475569; padding:2px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(99,179,237,0.08); }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .btn-primary { padding:7px 16px; border-radius:7px; border:none; background:linear-gradient(135deg,#1e88e5,#0d47a1); color:white; font-size:12px; font-weight:700; cursor:pointer; }
+  .btn-secondary { padding:7px 16px; border-radius:7px; border:1px solid rgba(99,179,237,0.2); background:rgba(30,136,229,0.1); color:#60a5fa; font-size:12px; font-weight:600; cursor:pointer; }
+  .avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#1e88e5,#0d47a1); display:flex; align-items:center; justify-content:center; font-weight:800; color:white; font-size:13px; }
+
+  /* CONTENT */
+  .content { padding:24px; flex:1; }
+
+  /* CARDS */
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  .stat-card { background:linear-gradient(135deg,#0d1b2a,#111f35); border:1px solid rgba(99,179,237,0.1); border-radius:12px; padding:16px; position:relative; overflow:hidden; cursor:pointer; }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .stat-card.blue::before { background:#3b82f6; }
+  .stat-card.green::before { background:#10b981; }
+  .stat-card.yellow::before { background:#f59e0b; }
+  .stat-card.red::before { background:#ef4444; }
+  .stat-label { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+  .stat-value { font-size:24px; font-weight:800; }
+  .stat-sub { font-size:11px; color:#475569; margin-top:4px; }
+
+  /* TABLE */
+  .table-container { background:linear-gradient(135deg,#0d1b2a,#111f35); border:1px solid rgba(99,179,237,0.1); border-radius:13px; overflow:hidden; }
+  .table-header { padding:16px 20px; border-bottom:1px solid rgba(99,179,237,0.08); display:flex; justify-content:space-between; align-items:center; }
+  .table-title { font-size:14px; font-weight:700; }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:11px 14px; text-align:left; font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(99,179,237,0.08); }
+  td { padding:12px 14px; font-size:12px; border-bottom:1px solid rgba(99,179,237,0.04); }
+  tr:hover td { background:rgba(255,255,255,0.02); }
+
+  /* BADGE */
+  .status-badge { padding:3px 9px; border-radius:4px; font-size:10px; font-weight:700; }
+  .badge-green { background:rgba(16,185,129,0.15); color:#10b981; }
+  .badge-yellow { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .badge-red { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .badge-blue { background:rgba(59,130,246,0.15); color:#3b82f6; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; margin-top:4px; }
+  .progress-fill { height:100%; border-radius:3px; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:200; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#0d1b2a; border:1px solid rgba(99,179,237,0.2); border-radius:16px; padding:28px; width:560px; max-width:90vw; max-height:90vh; overflow-y:auto; }
+  .modal-title { font-size:16px; font-weight:700; margin-bottom:20px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group.full { grid-column:1/-1; }
+  label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; }
+  input, select, textarea { background:rgba(255,255,255,0.04); border:1px solid rgba(99,179,237,0.15); border-radius:7px; padding:9px 12px; font-size:12px; color:#e2e8f0; outline:none; width:100%; }
+  input:focus, select:focus, textarea:focus { border-color:rgba(99,179,237,0.4); }
+  select option { background:#0d1b2a; }
+  .modal-footer { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:60px 20px; color:#475569; }
+  .empty-icon { font-size:48px; margin-bottom:12px; }
+  .empty-text { font-size:14px; margin-bottom:16px; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:300; animation:slideIn 0.3s ease; }
+  .toast.success { background:#10b981; color:white; }
+  .toast.error { background:#ef4444; color:white; }
+  @keyframes slideIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+  /* LOADING */
+  .loading { text-align:center; padding:40px; color:#64748b; font-size:13px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">O</div>
+    <div>
+      <div class="logo-text">OXFORD</div>
+      <div class="logo-sub">Aluminum & Glass</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('projects')"><span class="nav-icon">🏗️</span> Projects</div>
+    <div class="nav-item" onclick="showPage('inquiries')"><span class="nav-icon">📊</span> Estimation</div>
+    <div class="nav-item" onclick="showPage('procurement')"><span class="nav-icon">🛒</span> Procurement</div>
+    <div class="nav-item" onclick="showPage('invoices')"><span class="nav-icon">💰</span> Invoicing</div>
+    <div class="nav-item" onclick="showPage('expenses')"><span class="nav-icon">📈</span> Accounts</div>
+    <div class="nav-item" onclick="showPage('employees')"><span class="nav-icon">👥</span> HR</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">
+      <span id="page-icon">🏠</span>
+      <span id="page-title">Dashboard</span>
+      <span class="date-badge" id="current-date"></span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-primary" id="add-btn" onclick="openAddModal()" style="display:none">+ Add New</button>
+      <div class="avatar">GM</div>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="loading">Loading...</div>
+  </div>
+</div>
+
+<!-- ADD PROJECT MODAL -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-title">🏗️ Add New Project</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Project Number</label><input id="p-number" placeholder="e.g. 260407"></div>
+      <div class="form-group"><label>Project Name *</label><input id="p-name" placeholder="e.g. Sobha Seahaven"></div>
+      <div class="form-group"><label>Client</label><input id="p-client" placeholder="Client name"></div>
+      <div class="form-group"><label>Type</label><select id="p-type"><option>B2B</option><option>B2C</option></select></div>
+      <div class="form-group"><label>Contract Value (AED)</label><input id="p-value" type="number" placeholder="0"></div>
+      <div class="form-group"><label>Stage</label><select id="p-stage"><option>Inquiry</option><option>Survey</option><option>Procurement</option><option>Fabrication</option><option>Installation</option><option>Handover</option><option>Completed</option></select></div>
+      <div class="form-group"><label>Start Date</label><input id="p-start" type="date"></div>
+      <div class="form-group"><label>Target Date</label><input id="p-target" type="date"></div>
+      <div class="form-group"><label>LPO Number</label><input id="p-lpo" placeholder="LPO number"></div>
+      <div class="form-group"><label>Workers</label><input id="p-workers" type="number" placeholder="0"></div>
+      <div class="form-group"><label>Contractor</label><input id="p-contractor" placeholder="Main contractor"></div>
+      <div class="form-group"><label>Consultant</label><input id="p-consultant" placeholder="Consultant name"></div>
+      <div class="form-group full"><label>Scope of Work</label><textarea id="p-scope" rows="2" placeholder="Describe the scope..."></textarea></div>
+      <div class="form-group full"><label>System</label><input id="p-system" placeholder="e.g. Alumil M35 + S650"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('project-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD INQUIRY MODAL -->
+<div class="modal-overlay" id="inquiry-modal">
+  <div class="modal">
+    <div class="modal-title">📊 Add New Inquiry</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Client Name *</label><input id="i-name" placeholder="Client name"></div>
+      <div class="form-group"><label>Contact Number</label><input id="i-contact" placeholder="+971 XX XXX XXXX"></div>
+      <div class="form-group"><label>Client Type</label><select id="i-type"><option>B2C</option><option>B2B</option></select></div>
+      <div class="form-group"><label>Channel</label><select id="i-channel"><option>WhatsApp</option><option>Office Visit</option><option>Email</option><option>Phone Call</option><option>Referral</option></select></div>
+      <div class="form-group full"><label>Project Description</label><input id="i-desc" placeholder="Villa, apartment, commercial..."></div>
+      <div class="form-group"><label>Location</label><input id="i-location" placeholder="Dubai / Sharjah / Abu Dhabi"></div>
+      <div class="form-group"><label>Assign Estimator</label><input id="i-estimator" placeholder="Estimator name"></div>
+      <div class="form-group"><label>Priority (1-5)</label><select id="i-priority"><option>5 — Hot</option><option>4</option><option>3 — Medium</option><option>2</option><option>1 — Low</option></select></div>
+      <div class="form-group"><label>Quoted Value (AED)</label><input id="i-value" type="number" placeholder="0"></div>
+      <div class="form-group"><label>System Type</label><input id="i-system" placeholder="Alumil / Schuco / Gulf"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="i-notes" rows="2" placeholder="Any notes..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('inquiry-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveInquiry()">Save Inquiry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD INVOICE MODAL -->
+<div class="modal-overlay" id="invoice-modal">
+  <div class="modal">
+    <div class="modal-title">💰 Add New Invoice</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Invoice Number</label><input id="inv-number" placeholder="INV/OAGI/PI/2026/00001"></div>
+      <div class="form-group"><label>Invoice Date</label><input id="inv-date" type="date"></div>
+      <div class="form-group"><label>Client</label><input id="inv-client" placeholder="Client name"></div>
+      <div class="form-group"><label>Invoice Type</label><select id="inv-type"><option>Progress</option><option>Final</option><option>Retention</option><option>Advance</option></select></div>
+      <div class="form-group"><label>Contract Value (AED)</label><input id="inv-contract" type="number" placeholder="0"></div>
+      <div class="form-group"><label>This Invoice Amount (AED)</label><input id="inv-amount" type="number" placeholder="0" oninput="calcVAT()"></div>
+      <div class="form-group"><label>VAT 5% (AED)</label><input id="inv-vat" type="number" placeholder="0" readonly></div>
+      <div class="form-group"><label>Total Amount (AED)</label><input id="inv-total" type="number" placeholder="0" readonly></div>
+      <div class="form-group"><label>LPO Reference</label><input id="inv-lpo" placeholder="LPO number"></div>
+      <div class="form-group"><label>Status</label><select id="inv-status"><option>draft</option><option>submitted</option><option>pc_received</option><option>payment_received</option></select></div>
+      <div class="form-group"><label>PC Due Date</label><input id="inv-pc-due" type="date"></div>
+      <div class="form-group"><label>Payment Due Date</label><input id="inv-pay-due" type="date"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('invoice-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveInvoice()">Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <div class="modal-title">📈 Add Expense</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input id="exp-date" type="date"></div>
+      <div class="form-group"><label>Category</label><select id="exp-cat"><option>Materials</option><option>Salaries</option><option>Rent & Utilities</option><option>Vehicle & Fuel</option><option>Petty Cash</option><option>Tools & Equipment</option><option>Powder Coating</option><option>Other</option></select></div>
+      <div class="form-group full"><label>Description *</label><input id="exp-desc" placeholder="Description of expense"></div>
+      <div class="form-group"><label>Amount (AED) *</label><input id="exp-amount" type="number" placeholder="0"></div>
+      <div class="form-group"><label>Project</label><input id="exp-project" placeholder="Project name (optional)"></div>
+      <div class="form-group"><label>Paid By</label><select id="exp-paid"><option>Bank Transfer</option><option>Cash</option><option>Cheque</option></select></div>
+      <div class="form-group"><label>Status</label><select id="exp-status"><option>paid</option><option>pending</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('expense-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveExpense()">Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD EMPLOYEE MODAL -->
+<div class="modal-overlay" id="employee-modal">
+  <div class="modal">
+    <div class="modal-title">👥 Add Employee</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Employee Code</label><input id="emp-code" placeholder="e.g. 190306"></div>
+      <div class="form-group"><label>Full Name *</label><input id="emp-name" placeholder="Full name"></div>
+      <div class="form-group"><label>Role</label><input id="emp-role" placeholder="e.g. Foreman, QC Officer"></div>
+      <div class="form-group"><label>Department</label><select id="emp-dept"><option>Site</option><option>Factory</option><option>Estimation</option><option>Technical</option><option>Procurement</option><option>HR</option><option>Accounts</option></select></div>
+      <div class="form-group"><label>Nationality</label><input id="emp-nat" placeholder="Indian / Ethiopian..."></div>
+      <div class="form-group"><label>Monthly Salary (AED)</label><input id="emp-salary" type="number" placeholder="0"></div>
+      <div class="form-group"><label>Accommodation</label><input id="emp-acc" placeholder="Jebel Ali / Khawaneej..."></div>
+      <div class="form-group"><label>Date Joined</label><input id="emp-joined" type="date"></div>
+      <div class="form-group"><label>Visa Expiry</label><input id="emp-visa" type="date"></div>
+      <div class="form-group"><label>Passport Expiry</label><input id="emp-passport" type="date"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('employee-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveEmployee()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PO MODAL -->
+<div class="modal-overlay" id="po-modal">
+  <div class="modal">
+    <div class="modal-title">🛒 Add Purchase Order</div>
+    <div class="form-grid">
+      <div class="form-group"><label>PO Number</label><input id="po-number" placeholder="LPO/OAGI/..."></div>
+      <div class="form-group"><label>Date</label><input id="po-date" type="date"></div>
+      <div class="form-group"><label>Supplier *</label><input id="po-supplier" placeholder="Supplier name"></div>
+      <div class="form-group"><label>Category</label><select id="po-cat"><option>Aluminum Profiles</option><option>Glass</option><option>Hardware</option><option>Powder Coating</option><option>Steel Inserts</option><option>Accessories</option><option>Tools</option></select></div>
+      <div class="form-group"><label>Project</label><input id="po-project" placeholder="Project name"></div>
+      <div class="form-group"><label>Amount (AED)</label><input id="po-amount" type="number" placeholder="0"></div>
+      <div class="form-group"><label>Payment Terms</label><input id="po-terms" placeholder="e.g. 60 days"></div>
+      <div class="form-group"><label>Expected Delivery</label><input id="po-delivery" type="date"></div>
+      <div class="form-group"><label>Status</label><select id="po-status"><option>pending</option><option>confirmed</option><option>partial</option><option>received</option><option>urgent</option></select></div>
+      <div class="form-group full"><label>Notes</label><textarea id="po-notes" rows="2" placeholder="Any notes..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('po-modal')">Cancel</button>
+      <button class="btn-primary" onclick="savePO()">Save PO</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE SETUP ────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://vohdgwzsvkbpxgmwnxcr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cEwloxvr2rPxRCnB0z-pKA_KF4QsgOn';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  showPage('dashboard');
+});
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+const pageConfig = {
+  dashboard:   { icon:'🏠', title:'Dashboard',   addBtn:false },
+  projects:    { icon:'🏗️', title:'Projects',    addBtn:true  },
+  inquiries:   { icon:'📊', title:'Estimation',  addBtn:true  },
+  procurement: { icon:'🛒', title:'Procurement', addBtn:true  },
+  invoices:    { icon:'💰', title:'Invoicing',   addBtn:true  },
+  expenses:    { icon:'📈', title:'Accounts',    addBtn:true  },
+  employees:   { icon:'👥', title:'HR',          addBtn:true  },
+};
+
+function showPage(page) {
+  currentPage = page;
+  const cfg = pageConfig[page];
+  document.getElementById('page-icon').textContent = cfg.icon;
+  document.getElementById('page-title').textContent = cfg.title;
+  document.getElementById('add-btn').style.display = cfg.addBtn ? 'block' : 'none';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  const pages = { dashboard:loadDashboard, projects:loadProjects, inquiries:loadInquiries, procurement:loadProcurement, invoices:loadInvoices, expenses:loadExpenses, employees:loadEmployees };
+  if(pages[page]) pages[page]();
+}
+
+function openAddModal() {
+  const modals = { projects:'project-modal', inquiries:'inquiry-modal', procurement:'po-modal', invoices:'invoice-modal', expenses:'expense-modal', employees:'employee-modal' };
+  if(modals[currentPage]) document.getElementById(modals[currentPage]).classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── FORMAT ────────────────────────────────────────────────────────────────────
+const fmtAED = (n) => !n ? 'AED 0' : n >= 1000000 ? `AED ${(n/1000000).toFixed(1)}M` : n >= 1000 ? `AED ${(n/1000).toFixed(0)}K` : `AED ${Number(n).toLocaleString()}`;
+const statusBadge = (s) => {
+  const map = { active:'badge-blue', on_track:'badge-green', attention:'badge-yellow', delayed:'badge-red', completed:'badge-green', submitted:'badge-blue', pc_received:'badge-yellow', payment_received:'badge-green', overdue:'badge-red', draft:'badge-yellow', present:'badge-green', absent:'badge-red', pending:'badge-yellow', confirmed:'badge-blue', received:'badge-green', urgent:'badge-red', partial:'badge-yellow', won:'badge-green', lost:'badge-red', not_started:'badge-yellow', in_progress:'badge-blue', quote_sent:'badge-blue' };
+  return `<span class="status-badge ${map[s]||'badge-blue'}">${s?.replace(/_/g,' ')}</span>`;
+};
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading dashboard...</div>';
+  const [{ data: projects }, { data: invoices }, { data: expenses }, { data: employees }] = await Promise.all([
+    db.from('projects').select('*'),
+    db.from('invoices').select('*'),
+    db.from('expenses').select('*'),
+    db.from('employees').select('*'),
+  ]);
+
+  const activeProjects = projects?.filter(p => p.status !== 'completed').length || 0;
+  const totalInvoiced = invoices?.reduce((a,b) => a + (b.total_amount||0), 0) || 0;
+  const totalExpenses = expenses?.reduce((a,b) => a + (b.amount||0), 0) || 0;
+  const presentStaff = employees?.filter(e => e.attendance_today === 'present').length || 0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card blue" onclick="showPage('projects')">
+        <div class="stat-label">🏗️ Active Projects</div>
+        <div class="stat-value" style="color:#3b82f6">${activeProjects}</div>
+        <div class="stat-sub">${projects?.length || 0} total projects</div>
+      </div>
+      <div class="stat-card green" onclick="showPage('invoices')">
+        <div class="stat-label">💰 Total Invoiced</div>
+        <div class="stat-value" style="color:#10b981;font-size:18px">${fmtAED(totalInvoiced)}</div>
+        <div class="stat-sub">${invoices?.length || 0} invoices</div>
+      </div>
+      <div class="stat-card red" onclick="showPage('expenses')">
+        <div class="stat-label">📈 Total Expenses</div>
+        <div class="stat-value" style="color:#ef4444;font-size:18px">${fmtAED(totalExpenses)}</div>
+        <div class="stat-sub">All categories</div>
+      </div>
+      <div class="stat-card yellow" onclick="showPage('employees')">
+        <div class="stat-label">👥 Staff Present</div>
+        <div class="stat-value" style="color:#f59e0b">${presentStaff}</div>
+        <div class="stat-sub">${employees?.length || 0} total employees</div>
+      </div>
+    </div>
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Active Projects</div>
+        <button class="btn-primary" onclick="showPage('projects')">View All →</button>
+      </div>
+      ${projects?.length ? `
+      <table>
+        <thead><tr><th>Project</th><th>Client</th><th>Type</th><th>Contract Value</th><th>Stage</th><th>Progress</th><th>Status</th></tr></thead>
+        <tbody>
+          ${projects.slice(0,8).map(p => `
+            <tr>
+              <td><div style="font-weight:700;color:#e2e8f0">${p.name}</div><div style="color:#64748b;font-size:11px">#${p.project_number||p.id.slice(0,6)}</div></td>
+              <td style="color:#94a3b8">${p.client||'—'}</td>
+              <td>${statusBadge(p.type?.toLowerCase())}</td>
+              <td style="color:#10b981;font-weight:700">${fmtAED(p.contract_value)}</td>
+              <td style="color:#94a3b8">${p.stage||'—'}</td>
+              <td style="min-width:100px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${p.overall_progress||0}%;background:${(p.overall_progress||0)>=80?'#10b981':(p.overall_progress||0)>=50?'#f59e0b':'#ef4444'}"></div></div>
+                  <span style="font-size:11px;color:#94a3b8">${p.overall_progress||0}%</span>
+                </div>
+              </td>
+              <td>${statusBadge(p.status)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>` : '<div class="empty-state"><div class="empty-icon">🏗️</div><div class="empty-text">No projects yet</div><button class="btn-primary" onclick="showPage(\'projects\')">Add First Project</button></div>'}
+    </div>`;
+}
+
+// ── PROJECTS ──────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading projects...</div>';
+  const { data, error } = await db.from('projects').select('*').order('created_at', { ascending: false });
+  if(error) { document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-text">Error: ${error.message}</div></div>`; return; }
+
+  document.getElementById('content').innerHTML = `
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">All Projects (${data?.length || 0})</div>
+      </div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>#</th><th>Project Name</th><th>Client</th><th>Type</th><th>Contract Value</th><th>Stage</th><th>Workers</th><th>Progress</th><th>Target Date</th><th>Status</th></tr></thead>
+        <tbody>
+          ${data.map(p => `
+            <tr>
+              <td style="color:#60a5fa;font-weight:700">${p.project_number||'—'}</td>
+              <td><div style="font-weight:700;color:#e2e8f0">${p.name}</div><div style="color:#64748b;font-size:10px">${p.scope?.slice(0,40)||''}${p.scope?.length>40?'...':''}</div></td>
+              <td style="color:#94a3b8">${p.client||'—'}</td>
+              <td>${statusBadge(p.type?.toLowerCase())}</td>
+              <td style="color:#10b981;font-weight:700">${fmtAED(p.contract_value)}</td>
+              <td style="color:#94a3b8">${p.stage||'—'}</td>
+              <td style="text-align:center;font-weight:700;color:#f59e0b">${p.workers||0}</td>
+              <td style="min-width:100px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${p.overall_progress||0}%;background:${(p.overall_progress||0)>=80?'#10b981':'#f59e0b'}"></div></div>
+                  <span style="font-size:11px;color:#94a3b8">${p.overall_progress||0}%</span>
+                </div>
+              </td>
+              <td style="color:#64748b">${p.target_date||'—'}</td>
+              <td>${statusBadge(p.status)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">🏗️</div><div class="empty-text">No projects yet. Add your first project!</div></div>`}
+    </div>`;
+}
+
+async function saveProject() {
+  const name = document.getElementById('p-name').value.trim();
+  if(!name) { showToast('Project name is required', 'error'); return; }
+  const { error } = await db.from('projects').insert([{
+    project_number: document.getElementById('p-number').value,
+    name, client: document.getElementById('p-client').value,
+    type: document.getElementById('p-type').value,
+    contract_value: parseFloat(document.getElementById('p-value').value)||0,
+    stage: document.getElementById('p-stage').value,
+    start_date: document.getElementById('p-start').value||null,
+    target_date: document.getElementById('p-target').value||null,
+    lpo_number: document.getElementById('p-lpo').value,
+    workers: parseInt(document.getElementById('p-workers').value)||0,
+    contractor: document.getElementById('p-contractor').value,
+    consultant: document.getElementById('p-consultant').value,
+    scope: document.getElementById('p-scope').value,
+    system: document.getElementById('p-system').value,
+    status: 'active', overall_progress: 0,
+  }]);
+  if(error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('✅ Project saved successfully!');
+  closeModal('project-modal');
+  loadProjects();
+}
+
+// ── INQUIRIES ─────────────────────────────────────────────────────────────────
+async function loadInquiries() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading inquiries...</div>';
+  const { data } = await db.from('inquiries').select('*').order('created_at', { ascending: false });
+
+  document.getElementById('content').innerHTML = `
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">All Inquiries (${data?.length||0})</div>
+      </div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Channel</th><th>Description</th><th>Estimator</th><th>Priority</th><th>Quoted Value</th><th>Status</th></tr></thead>
+        <tbody>
+          ${data.map(i => `<tr>
+            <td style="color:#64748b">${i.inquiry_date||'—'}</td>
+            <td><div style="font-weight:700;color:#e2e8f0">${i.client_name}</div><div style="color:#64748b;font-size:10px">${i.contact_number||''}</div></td>
+            <td>${statusBadge(i.client_type?.toLowerCase())}</td>
+            <td style="color:#94a3b8">${i.channel||'—'}</td>
+            <td style="color:#94a3b8;max-width:160px">${i.project_description?.slice(0,50)||'—'}</td>
+            <td style="color:#94a3b8">${i.estimator||'—'}</td>
+            <td style="text-align:center"><span style="color:${i.priority>=4?'#ef4444':'#f59e0b'};font-weight:800">${i.priority||0}${i.priority>=4?'🔥':''}</span></td>
+            <td style="color:#10b981;font-weight:700">${fmtAED(i.quoted_value)}</td>
+            <td>${statusBadge(i.status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">No inquiries yet. Add your first inquiry!</div></div>`}
+    </div>`;
+}
+
+async function saveInquiry() {
+  const name = document.getElementById('i-name').value.trim();
+  if(!name) { showToast('Client name is required', 'error'); return; }
+  const { error } = await db.from('inquiries').insert([{
+    client_name: name,
+    contact_number: document.getElementById('i-contact').value,
+    client_type: document.getElementById('i-type').value,
+    channel: document.getElementById('i-channel').value,
+    project_description: document.getElementById('i-desc').value,
+    location: document.getElementById('i-location').value,
+    estimator: document.getElementById('i-estimator').value,
+    priority: parseInt(document.getElementById('i-priority').value)||0,
+    quoted_value: parseFloat(document.getElementById('i-value').value)||0,
+    system_type: document.getElementById('i-system').value,
+    notes: document.getElementById('i-notes').value,
+    status: 'not_started',
+  }]);
+  if(error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('✅ Inquiry saved!');
+  closeModal('inquiry-modal');
+  loadInquiries();
+}
+
+// ── INVOICES ──────────────────────────────────────────────────────────────────
+function calcVAT() {
+  const amt = parseFloat(document.getElementById('inv-amount').value)||0;
+  const vat = amt * 0.05;
+  document.getElementById('inv-vat').value = vat.toFixed(2);
+  document.getElementById('inv-total').value = (amt + vat).toFixed(2);
+}
+
+async function loadInvoices() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading invoices...</div>';
+  const { data } = await db.from('invoices').select('*').order('created_at', { ascending: false });
+  const total = data?.reduce((a,b)=>a+(b.total_amount||0),0)||0;
+  const received = data?.filter(i=>i.status==='payment_received').reduce((a,b)=>a+(b.total_amount||0),0)||0;
+  const pending = total - received;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+      <div class="stat-card blue"><div class="stat-label">Total Invoiced</div><div class="stat-value" style="color:#3b82f6;font-size:18px">${fmtAED(total)}</div></div>
+      <div class="stat-card green"><div class="stat-label">Payment Received</div><div class="stat-value" style="color:#10b981;font-size:18px">${fmtAED(received)}</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Pending</div><div class="stat-value" style="color:#f59e0b;font-size:18px">${fmtAED(pending)}</div></div>
+    </div>
+    <div class="table-container">
+      <div class="table-header"><div class="table-title">All Invoices (${data?.length||0})</div></div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>Invoice No.</th><th>Date</th><th>Client</th><th>Type</th><th>Amount</th><th>VAT</th><th>Total</th><th>PC Due</th><th>Payment Due</th><th>Status</th></tr></thead>
+        <tbody>
+          ${data.map(i=>`<tr>
+            <td style="color:#60a5fa;font-weight:700">${i.invoice_number||'—'}</td>
+            <td style="color:#64748b">${i.invoice_date||'—'}</td>
+            <td style="color:#e2e8f0">${i.client||'—'}</td>
+            <td>${statusBadge(i.invoice_type?.toLowerCase())}</td>
+            <td style="color:#e2e8f0">${fmtAED(i.this_invoice_amount)}</td>
+            <td style="color:#64748b">${fmtAED(i.vat_amount)}</td>
+            <td style="color:#10b981;font-weight:700">${fmtAED(i.total_amount)}</td>
+            <td style="color:#f59e0b">${i.pc_due_date||'—'}</td>
+            <td style="color:#f59e0b">${i.payment_due_date||'—'}</td>
+            <td>${statusBadge(i.status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-text">No invoices yet. Add your first invoice!</div></div>`}
+    </div>`;
+}
+
+async function saveInvoice() {
+  const { error } = await db.from('invoices').insert([{
+    invoice_number: document.getElementById('inv-number').value,
+    invoice_date: document.getElementById('inv-date').value||null,
+    client: document.getElementById('inv-client').value,
+    invoice_type: document.getElementById('inv-type').value,
+    contract_value: parseFloat(document.getElementById('inv-contract').value)||0,
+    this_invoice_amount: parseFloat(document.getElementById('inv-amount').value)||0,
+    vat_amount: parseFloat(document.getElementById('inv-vat').value)||0,
+    total_amount: parseFloat(document.getElementById('inv-total').value)||0,
+    lpo_reference: document.getElementById('inv-lpo').value,
+    status: document.getElementById('inv-status').value,
+    pc_due_date: document.getElementById('inv-pc-due').value||null,
+    payment_due_date: document.getElementById('inv-pay-due').value||null,
+  }]);
+  if(error) { showToast('Error: '+error.message,'error'); return; }
+  showToast('✅ Invoice saved!');
+  closeModal('invoice-modal');
+  loadInvoices();
+}
+
+// ── EXPENSES ──────────────────────────────────────────────────────────────────
+async function loadExpenses() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading expenses...</div>';
+  const { data } = await db.from('expenses').select('*').order('created_at', { ascending: false });
+  const total = data?.reduce((a,b)=>a+(b.amount||0),0)||0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      ${['Materials','Salaries','Rent & Utilities','Vehicle & Fuel'].map(cat=>{
+        const catTotal = data?.filter(e=>e.category===cat).reduce((a,b)=>a+(b.amount||0),0)||0;
+        return `<div class="stat-card blue"><div class="stat-label">${cat}</div><div class="stat-value" style="color:#ef4444;font-size:16px">${fmtAED(catTotal)}</div></div>`;
+      }).join('')}
+    </div>
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">All Expenses — Total: ${fmtAED(total)}</div>
+      </div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Project</th><th>Amount</th><th>Paid By</th><th>Status</th></tr></thead>
+        <tbody>
+          ${data.map(e=>`<tr>
+            <td style="color:#64748b">${e.expense_date||'—'}</td>
+            <td><span class="status-badge badge-blue">${e.category||'—'}</span></td>
+            <td style="color:#e2e8f0">${e.description}</td>
+            <td style="color:#64748b">${e.project_name||'General'}</td>
+            <td style="color:#ef4444;font-weight:700">${fmtAED(e.amount)}</td>
+            <td style="color:#94a3b8">${e.paid_by||'—'}</td>
+            <td>${statusBadge(e.status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-text">No expenses yet. Add your first expense!</div></div>`}
+    </div>`;
+}
+
+async function saveExpense() {
+  const desc = document.getElementById('exp-desc').value.trim();
+  const amount = parseFloat(document.getElementById('exp-amount').value)||0;
+  if(!desc||!amount) { showToast('Description and amount are required','error'); return; }
+  const { error } = await db.from('expenses').insert([{
+    expense_date: document.getElementById('exp-date').value||null,
+    category: document.getElementById('exp-cat').value,
+    description: desc, amount,
+    project_name: document.getElementById('exp-project').value,
+    paid_by: document.getElementById('exp-paid').value,
+    status: document.getElementById('exp-status').value,
+  }]);
+  if(error) { showToast('Error: '+error.message,'error'); return; }
+  showToast('✅ Expense saved!');
+  closeModal('expense-modal');
+  loadExpenses();
+}
+
+// ── EMPLOYEES ─────────────────────────────────────────────────────────────────
+async function loadEmployees() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading employees...</div>';
+  const { data } = await db.from('employees').select('*').order('created_at', { ascending: false });
+  const present = data?.filter(e=>e.attendance_today==='present').length||0;
+  const absent = data?.filter(e=>e.attendance_today==='absent').length||0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+      <div class="stat-card blue"><div class="stat-label">Total Employees</div><div class="stat-value" style="color:#3b82f6">${data?.length||0}</div></div>
+      <div class="stat-card green"><div class="stat-label">Present Today</div><div class="stat-value" style="color:#10b981">${present}</div></div>
+      <div class="stat-card red"><div class="stat-label">Absent Today</div><div class="stat-value" style="color:#ef4444">${absent}</div></div>
+    </div>
+    <div class="table-container">
+      <div class="table-header"><div class="table-title">All Employees (${data?.length||0})</div></div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>Code</th><th>Name</th><th>Role</th><th>Department</th><th>Nationality</th><th>Salary</th><th>Visa Expiry</th><th>Today</th></tr></thead>
+        <tbody>
+          ${data.map(e=>`<tr>
+            <td style="color:#60a5fa;font-weight:700">${e.employee_code||'—'}</td>
+            <td style="font-weight:700;color:#e2e8f0">${e.name}</td>
+            <td style="color:#94a3b8">${e.role||'—'}</td>
+            <td><span class="status-badge badge-blue">${e.department||'—'}</span></td>
+            <td style="color:#94a3b8">${e.nationality||'—'}</td>
+            <td style="color:#10b981;font-weight:700">${fmtAED(e.salary)}</td>
+            <td style="color:${e.visa_expiry&&new Date(e.visa_expiry)<new Date(Date.now()+90*86400000)?'#ef4444':'#94a3b8'}">${e.visa_expiry||'—'}</td>
+            <td>${statusBadge(e.attendance_today)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No employees yet. Add your first employee!</div></div>`}
+    </div>`;
+}
+
+async function saveEmployee() {
+  const name = document.getElementById('emp-name').value.trim();
+  if(!name) { showToast('Name is required','error'); return; }
+  const { error } = await db.from('employees').insert([{
+    employee_code: document.getElementById('emp-code').value,
+    name, role: document.getElementById('emp-role').value,
+    department: document.getElementById('emp-dept').value,
+    nationality: document.getElementById('emp-nat').value,
+    salary: parseFloat(document.getElementById('emp-salary').value)||0,
+    accommodation: document.getElementById('emp-acc').value,
+    joined_date: document.getElementById('emp-joined').value||null,
+    visa_expiry: document.getElementById('emp-visa').value||null,
+    passport_expiry: document.getElementById('emp-passport').value||null,
+    attendance_today: 'present', status: 'active',
+  }]);
+  if(error) { showToast('Error: '+error.message,'error'); return; }
+  showToast('✅ Employee saved!');
+  closeModal('employee-modal');
+  loadEmployees();
+}
+
+// ── PROCUREMENT ───────────────────────────────────────────────────────────────
+async function loadProcurement() {
+  document.getElementById('content').innerHTML = '<div class="loading">Loading purchase orders...</div>';
+  const { data } = await db.from('purchase_orders').select('*').order('created_at', { ascending: false });
+  const total = data?.reduce((a,b)=>a+(b.amount||0),0)||0;
+  const urgent = data?.filter(p=>p.status==='urgent').length||0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+      <div class="stat-card blue"><div class="stat-label">Total POs</div><div class="stat-value" style="color:#3b82f6">${data?.length||0}</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Total Value</div><div class="stat-value" style="color:#f59e0b;font-size:18px">${fmtAED(total)}</div></div>
+      <div class="stat-card red"><div class="stat-label">Urgent</div><div class="stat-value" style="color:#ef4444">${urgent}</div></div>
+    </div>
+    <div class="table-container">
+      <div class="table-header"><div class="table-title">Purchase Orders (${data?.length||0})</div></div>
+      ${data?.length ? `
+      <table>
+        <thead><tr><th>PO Number</th><th>Date</th><th>Supplier</th><th>Category</th><th>Project</th><th>Amount</th><th>Payment Terms</th><th>Delivery</th><th>Received %</th><th>Status</th></tr></thead>
+        <tbody>
+          ${data.map(p=>`<tr>
+            <td style="color:#60a5fa;font-weight:700">${p.po_number||'—'}</td>
+            <td style="color:#64748b">${p.po_date||'—'}</td>
+            <td style="font-weight:600;color:#e2e8f0">${p.supplier}</td>
+            <td><span class="status-badge badge-blue">${p.category||'—'}</span></td>
+            <td style="color:#94a3b8">${p.project_name||'—'}</td>
+            <td style="color:#10b981;font-weight:700">${fmtAED(p.amount)}</td>
+            <td style="color:#94a3b8">${p.payment_terms||'—'}</td>
+            <td style="color:#f59e0b">${p.expected_delivery||'—'}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div class="progress-bar" style="flex:1;width:60px"><div class="progress-fill" style="width:${p.received_pct||0}%;background:#10b981"></div></div>
+                <span style="font-size:11px;color:#94a3b8">${p.received_pct||0}%</span>
+              </div>
+            </td>
+            <td>${statusBadge(p.status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">No purchase orders yet. Add your first PO!</div></div>`}
+    </div>`;
+}
+
+async function savePO() {
+  const supplier = document.getElementById('po-supplier').value.trim();
+  if(!supplier) { showToast('Supplier is required','error'); return; }
+  const { error } = await db.from('purchase_orders').insert([{
+    po_number: document.getElementById('po-number').value,
+    po_date: document.getElementById('po-date').value||null,
+    supplier, category: document.getElementById('po-cat').value,
+    project_name: document.getElementById('po-project').value,
+    amount: parseFloat(document.getElementById('po-amount').value)||0,
+    payment_terms: document.getElementById('po-terms').value,
+    expected_delivery: document.getElementById('po-delivery').value||null,
+    status: document.getElementById('po-status').value,
+    notes: document.getElementById('po-notes').value,
+    received_pct: 0,
+  }]);
+  if(error) { showToast('Error: '+error.message,'error'); return; }
+  showToast('✅ Purchase Order saved!');
+  closeModal('po-modal');
+  loadProcurement();
+}
+</script>
+</body>
+</html>
